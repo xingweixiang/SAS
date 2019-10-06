@@ -345,3 +345,48 @@ PROC  surveyselect
       out=cysj  seed =100;
 RUN;
 ```
+### 11、format过程
+- format过程，主要用来定义数值或符号文字的输出和输入格式
+- 实例内容：学生成绩显示应用，小于60分显示不及格，大于等于60分小于80分为良好，大于等于80分为优秀
+```
+PROC format;
+value scor_desc  0-<60='不及格' 
+            60-<80='良好'
+            other='优秀';
+		  RUN;
+		DATA stu_score;
+		input id name $ score;
+		cards;
+		1001 高宏 58
+		1002 马小名 60
+		1003 刘晓华 80
+		1004 董青青 90
+		1005 杨峰 78
+		;
+		RUN;
+/*打印过程调用format过程定义的类型，通过foramt语句引用类型*/
+PROC PRINT DATA=stu_score;
+format score scor_desc.;/*format语句引用format过程定义的类型*/
+RUN;
+```
+### 12、sort过程
+- sort过程，将数据集中某一个变量或几个变量按升序或降序重新排列，并把结果存储到输出数据集中
+- 实例内容：去除学生数据集中姓名相同的记录，并按姓名降序排列，输出到数据集st_order
+```
+DATA stu;
+input id name $ score;
+    cards;
+    1001 高宏 58
+    1002 马小名 60
+    1003 刘晓华 80
+    1004 董青青 90
+    1005 杨峰 78
+    1006 杨峰 98
+    1003 刘晓华 80
+    ;
+    RUN;
+/*SORT过程通过noduprecs 去除完全相同的记录，结果输出到数据集stu_order*/
+PROC sort data=stu out=st_order noduprecs ;
+by descending name;
+RUN;
+```
