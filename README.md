@@ -13,6 +13,7 @@
 	    * [3、copy过程](#3copy过程)
 	    * [4、SQL过程](#4SQL过程)
 	    * [5、report过程](#5report过程)
+	    * [6、freq过程](#6freq过程)
 ### 一、SAS数据步
 数据步以data为开始，run为结束标志。
 ### 1、SET语句
@@ -229,4 +230,28 @@ compute dif ;
 dif=same_index-hb_index;
 endcomp;
 RUN;
+```
+### 6、freq过程
+- freq过程，主要用于两个目的，一是描述分析，二是统计推断
+- 实例内容：根据班级分组，求出每个班级的频数
+```
+libname jx 'd:\jx';
+data jx.class;
+input class name $ math english chiness;
+cards;
+1 高洪 89 78 99
+1 王红与 78 45 32
+1 李小心 74 72 78
+2 马小名 87 98 86
+2 刘小红 56 82 83
+2 董西幂 88 91 92
+3 杨小青 78 56 87
+3 张峰余 56 78 23
+3 赵晓霞 90 98 96
+;
+RUN;
+/*调用freq过程对数据集分析*/
+PROC FREQ data=jx.class;
+   by class;/*按class班级分组，求出每个班级的频数*/
+RUN; 
 ```
