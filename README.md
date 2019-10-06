@@ -20,6 +20,10 @@
 	    * [10、surveyselect抽样过程](#10surveyselect抽样过程)
 	    * [11、format过程](#11format过程)
 	    * [12、sort过程](#12sort过程)
+	* [三、统计分析](#三统计分析)
+	    * [1、描述性统计](#1描述性统计)
+	    * [2、方差分析](#2方差分析)
+	    * [3、相关分析](#3相关分析)
 ### 一、SAS数据步
 数据步以data为开始，run为结束标志。
 ### 1、SET语句
@@ -390,3 +394,60 @@ PROC sort data=stu out=st_order noduprecs ;
 by descending name;
 RUN;
 ```
+### 三、统计分析
+### 1、描述性统计
+- 实例内容：调查某个地区50个人的年收入情况，求出年收入最小值、最大值、均值和全距。利用means过程进行简单的描述性统计
+```
+*对外部数据处理;
+%let  path= D:\jx\sr;  /*定义外部文件路径*/
+%let  type=.txt;
+%let  fil= "&path&type";
+LIBNAME  jx 'd:\jx';  /*定义逻辑库*/
+DATA  jx.sr;  /*数据集存储到指定逻辑库*/
+	Infile  &fil  ; 
+	input  id  :$4. year_money ;
+RUN;
+PROC means data=jx.sr min max mean range; /*统计关键字min、max、mean和range*/
+ var year_money;/*指定分析变量*/
+RUN;
+```
+- 分析结论：根据means过程统计分析输出，可看出此调查数据中全距比较大，用年收入均值不能反映出某地区的年收入均值，应用众数最好
+- 实例内容：根据地区分析刷卡交易年违约情况
+```
+*对外部数据处理;
+%let  path= D:\jx\weiyue;  /*定义外部文件路径*/
+%let  type=.txt;
+%let  fil= "&path&type";
+LIBNAME  jx 'd:\jx';  /*定义逻辑库*/
+DATA  jx.weiyue;  /*数据集存储到指定逻辑库*/
+	Infile  &fil dlm='|'  dsd  missover; 
+	input   diqu  :$4. year  :4. times :5. description :$30. ;
+RUN;
+*各区属各年伤害信用违约次数;
+proc freq data=jx.weiyue formchar(1,2,7)='|-+' ;
+table year*times/ nopct ;
+run;
+```
+### 2、方差分析
+方差分析是检验两个或两个以上样本均数差异是否具有统计意义的一种
+- 实例内容：研究正常人体重与非正常人体重的差异
+```
+*对外部数据处理;
+%let  path= D:\jx\sg_tz;  /*定义外部文件路径*/
+%let  type=.txt;
+%let  fil= "&path&type";
+LIBNAME  jx 'd:\jx';  /*定义逻辑库*/
+DATA  jx.sg_tz;  /*数据集存储到指定逻辑库*/
+	Infile  &fil dlm='|'  dsd  missover; 
+	input  group  :1. sg  :3. tz :8. ;
+RUN;
+/*调anova过程分析*/
+PROC anova data=jx.sg_tz;
+class group;
+model tz=group;
+RUN;
+means group/duncan;
+RUN;
+QUIT;
+```
+- 分析结论：从输出结果看变量group的F值，F=12.75，P=0。0031<0.01，可以得出两组体重有显著性差异
