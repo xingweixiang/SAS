@@ -9,6 +9,10 @@
 		* [4、oracle数据处理](#4oracle数据处理)
 	* [二、SAS过程步](#二SAS过程步)
 	    * [1、print过程](#1print过程)
+	    * [2、means过程](#2means过程)
+	    * [3、copy过程](#3copy过程)
+	    * [4、SQL过程](#4SQL过程)
+	    * [5、report过程](#5report过程)
 ### 一、SAS数据步
 数据步以data为开始，run为结束标志。
 ### 1、SET语句
@@ -119,4 +123,110 @@ where math>80 and english>80 and chinese>80;
 title '各科成绩大于80分的学生信息';
 /*title语句指定标题*/
 RUN; 
+```
+### 2、means过程
+- means过程是SAS提供的一个数据汇总统计过程，提供单个或多个变量的简单描述统计分析<br>
+- 实例内容：某奶厂用自动装奶机装奶，在装奶机正常工作时，每瓶奶净重450G，某日随机抽取了10瓶成品，称重分别为452 436 447 439 445 460 442 456 447 440，请问这时的装奶机是否正常工作？
+- 分析：若装奶机正常，当前已经装奶的全部净重与450G无统计意义差异。将分析变量的值减去正常值，得到一组新样本，做均值为零的T检验。
+```
+DATA tcheck;
+input milck @@;
+milck=milck-450;/*与正常值的差*/
+cards;
+452 436 447 439 445 460 442 456 447 440
+;
+RUN;
+/*调用means过程进行T检验*/
+PROC means data=tcheck t prt;/*T检验*/
+RUN;
+```
+- 结论：T检验中p=0.1737>0.05，假设成立，因此装奶机正常
+### 3、copy过程
+- copy过程可以复制一个逻辑库下的所有数据集到另一个逻辑库下或者从一个文件复制到另一个文件，也可以有选择地复制逻辑库下的数据集。<br>
+- 实例内容：复制jx逻辑库中的数据集stu和stu2到逻辑库mb中，并从sy逻辑库删除stu和stu2数据集
+```
+libname jx 'd:\jx';/*创建源逻辑库*/
+libname sy 'd:\test';/*创建目标逻辑库*/
+data jx.stu;
+input id name $ class;
+cards;
+1001 晚上 1
+1002 白天 1
+;
+run;
+data jx.stu2;
+input id name $ class;
+cards;
+1001 李三 2
+1002 张四 2
+;
+run;
+/*调用copy过程复制数据集到目标逻辑库*/
+PROC copy in=jx out=sy move;
+/*in=指定源逻辑库名，out=目标逻辑库名,move选择指定复制成功从源逻辑库删除复制的数据集*/
+select stu stu2;
+/*选择复制的数据集名*/
+run;
+```
+### 4、SQL过程
+- SQL过程，相当于数据库里的存储过程，可以对数据集或关系数据库的表进行查询、修改，实现创建表、删除数据、插入数据和更新数据等功能<br>
+- 实例内容：查询学生成绩数据集stu_score，语文成绩大于60分小于80分的显示及格，大于等于80分的显示优秀，其他显示不及格；数学成绩大于60分小于80分的显示及格，大于等于80分的显示优秀，其他显示不及格；英语成绩大于60分小于80分的显示及格，大于等于80分的显示优秀，其他显示不及格。
+```
+DATA stu_score;
+input id name $ chinese math english;
+cards;
+1001 张三 58 78 90
+1002 李四 78 38 88
+1003 刘务华 89 90 87
+1004 董小 60 80 52
+1005 杨三 38 45 51
+1006 张信 99 89 87
+;
+RUN;
+/*调用sql过程，通过case when语句实现*/
+PROC sql;
+select name as 姓名,(case when chinese>=80 then '优秀' 
+                  when chinese>=60 then '及格'
+				     else '不及格' end) as 语文,
+			 (case when math>=80 then '优秀' 
+                  when math>=60 then '及格'
+				     else '不及格' end) as 数学,
+			(case when english>=80 then '优秀' 
+                  when english>=60 then '及格'
+				     else '不及格' end) as 英语
+	from stu_score;
+	QUIT;
+```
+### 5、report过程
+- report过程，是制作报表的工具，将print、means和tabulate过程的特点与DATA步报告写法的特点结合起来组合成了一个强大的生成报表的工具<br>
+- 实例内容：房价经济指数数据，环比与同比、定基数据生成报表
+```
+libname re 'd:\jx';
+data re.house;
+input city $ hb_index same_index def_index;
+cards;
+北京 99.9 100.3 102.4
+天津 99.8 100.2 103.1 
+秦皇岛 99.8 100.5 106.3 
+石家庄 99.7 101.3 107.7 
+包头 99.8 100.0 103.9 
+太原 100.0 100.9 101.7  
+;
+RUN;
+proc print data=re.house;
+run;
+/*调用report过程生成报表*/
+PROC report data=re.house headline headskip;
+title '六个大中城市住宅销售价格指数 (2012年2月)';
+title2 '单月城市销售价格';
+column city hb_index same_index def_index dif;
+define city /order format=$6. width=6 '城市';
+define hb_index/display format=5.1 width=5 '环比';
+define same_index/display format=5.1 width=5 '同比';
+define def_index/display format=5.1 width=5 '定基';
+define  dif/computed format=5.1 width=5 '差比';
+compute dif ; 
+dif=same_index-hb_index;
+endcomp;
+RUN;
 ```
