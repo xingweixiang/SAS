@@ -24,6 +24,7 @@
 	    * [1、描述性统计](#1描述性统计)
 	    * [2、方差分析](#2方差分析)
 	    * [3、相关分析](#3相关分析)
+	    * [4、回归分析](#4回归分析)
 ### 一、SAS数据步
 数据步以data为开始，run为结束标志。
 ### 1、SET语句
@@ -451,3 +452,48 @@ RUN;
 QUIT;
 ```
 - 分析结论：从输出结果看变量group的F值，F=12.75，P=0。0031<0.01，可以得出两组体重有显著性差异
+### 3、相关分析
+相关分析是为了检验分析变量之间是否存在某种联系，以及变量之间联系的密切程度，其联系的密切程序通过相关系数衡量。在医学、经济领域以及产品检验领域经常用到
+- 实例内容：研究遗传学身高，测量20名学生的身高与其父母的身高数据
+```
+*对外部数据处理;
+%let  path= D:\jx\shengao;  /*定义外部文件路径*/
+%let  type=.txt;
+%let  fil= "&path&type";
+LIBNAME  jx 'd:\jx';  /*定义逻辑库*/
+DATA  jx.shengao;  /*数据集存储到指定逻辑库*/
+	Infile  &fil dlm='|'  dsd  missover; 
+	input  haizi :4. father  :4. mother :4.;
+RUN;
+/*调corr过程分析*/
+PROC corr data=jx.shengao nosimple;
+var father mother haizi;
+RUN;
+```
+- 分析结论：通过分析可以看出孩子的身高与父母的身高是正相关的
+### 4、回归分析
+回归分析是对具有相关关系的两个或两个以上变量之间的依存关系进行测定，通过自变量的变化预测因变量的变化趋势
+- 实例内容：根据客户购买电子产品的数据分析哪类人员购买电子产品比较多，以便于营销人员有针对性的推广
+```
+*对外部数据处理;
+%let  path= D:\jx\dianzi;  /*定义外部文件路径*/
+%let  type=.txt;
+%let  fil= "&path&type";
+LIBNAME  jx 'd:\jx';  /*定义逻辑库*/
+DATA  jx.dianzi;  /*数据集存储到指定逻辑库*/
+	Infile  &fil ; 
+/*文件记录长度超过256用lrecl=指定长度*/
+input  id $ name $ education  yincome  work_period goumai_days goumai_type; 
+label goumai_type='购买标识' ;
+RUN;
+PROC logistic data=jx.dianzi desc;/*逻辑回归分析，降序排列目标变量*/
+     model goumai_type=education yincome work_period /noint
+               selection=stepwise
+               sle=0.2
+               sls=0.1
+               details
+               stb;
+    output out=jx.goumai_analy;  /*指定输出分析结果到存储目录数据集*/
+RUN;
+```
+- 分析结论：从输出结果分析可以看出教育、工作年限和年收入这三个自变量参数可以用来判断哪些客户经常购买电子产品、对这历低、工作年限时间不长、年收入低的客户建议不做推广销售。
