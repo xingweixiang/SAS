@@ -14,6 +14,12 @@
 	    * [4、SQL过程](#4SQL过程)
 	    * [5、report过程](#5report过程)
 	    * [6、freq过程](#6freq过程)
+	    * [7、summary过程](#7summary过程)
+	    * [8、compare过程](#8compare过程)
+	    * [9、datasets过程](#9datasets过程)
+	    * [10、surveyselect抽样过程](#10surveyselect抽样过程)
+	    * [11、format过程](#11format过程)
+	    * [12、sort过程](#12sort过程)
 ### 一、SAS数据步
 数据步以data为开始，run为结束标志。
 ### 1、SET语句
@@ -254,4 +260,88 @@ RUN;
 PROC FREQ data=jx.class;
    by class;/*按class班级分组，求出每个班级的频数*/
 RUN; 
+```
+### 7、summary过程
+- summary过程，主要用来对数值变量计算单个变量的基本统计量，使用语句与means过程类似
+- 实例内容：学校学生体检数据的分析
+```
+Data students; 
+Input group age height weight sex $ ;
+Cards; 
+2 35 162 42 f 
+1 31 173 43 m 
+2 42 156 56 f 
+1 53 152 39 f 
+1 42 173 63 m 
+1 28 165 55 f 
+2 33 157 66 f 
+2 17 162 46 f 
+1 16 173 45 m 
+1 25 180 66 m 
+; 
+RUN;
+/*调用 sort过程首先对数据集排序*/
+PROC sort data=students; 
+by group ; /*; by 分组变量名串; 对by 变量的值排序(字母升序)*/ 
+/*调用summary过程*/
+PROC Summary data=students mean std n max min range stderr cv ; 
+/*指定统计关键量mean求均值，std*/
+var age height weight; /*指定分析变量*/
+class sex; /*指定分类变量，class 产生三类: 不分fm(以空白显示)及 f,m */ 
+by group ;/*by指定分组变量，产生二类:1,2 以上二行语句分成6 个水平组合进行统计*/ 
+output out=stu_analy ; 
+PROC print data=stu_analy; /*打印分析结果*/
+RUN; 
+```
+### 8、compare过程
+- compare过程，主要用来比较两个数据集的内容
+- 实例内容：比较学生信息数据集stu1和stu2的差异
+```
+ Data stu1; 
+Input  group  age  height  weight  sex $ ;
+Cards; 
+2 35 162 42 f 
+1 31 173 43 m 
+2 42 156 56 f 
+1 53 152 39 f 
+; 
+RUN;
+Data  stu2; 
+Input  group2  age  height  weight  sex  $ ;
+Cards; 
+2 35 162 42 f 
+1 31 173 43 m 
+2 42 156 56 f 
+; 
+RUN;
+PROC  compare  base=stu1  c=stu2  out=cy  brief;/*brief选项打印差异摘要信息*/
+Var  group;
+With  group2;
+RUN;
+```
+### 9、datasets过程
+- datasets过程，主要用来对SAS逻辑库中的SAS文件进行列表、复制、换名、添加和删除等操作。具有append过程、contents过程和copy过程的功能
+- 实例内容：删除逻辑库jx中的表afmsg和adomsg
+```
+ libname jx 'd:\jx\test';
+PROC DATASETS library=jx memtype=data;
+    delete afmsg adomsg;/*把jx逻辑库中的数据集afmsg和adomsg删除*/
+QUIT;
+```
+### 10、surveyselect抽样过程
+- surveyselect抽样过程，常用的抽样有单纯随机抽样、系统抽样、分层抽样、整群抽样等
+- 实例内容：从1万个样本中按随机数100抽取数据，选择简单随机抽样
+```
+DATA  sj ;
+Do  i = 1  to 10000 ;
+output ;
+end ;
+RUN;
+/*随机抽样*/
+PROC  surveyselect 
+      data =sj
+      method = srs 
+      n = 100 
+      out=cysj  seed =100;
+RUN;
 ```
