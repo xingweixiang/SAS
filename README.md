@@ -33,6 +33,8 @@
 	    * [8、判别分析](#8判别分析)
 	* [四、综合实例](#四综合实例)
 	    * [1、客户流失分析](#1客户流失分析)
+	    * [2、ODS输出HTML文件](#2ODS输出HTML文件)
+	    * [3、信用卡交易流水提取](#3信用卡交易流水提取)
 ### 一、SAS数据步
 数据步以data为开始，run为结束标志。
 ### 1、SET语句
@@ -631,4 +633,82 @@ var times;/*对times投诉次数分析*/
 RUN;
 ```
 - 分析结论：根据收集的信息卡数据进行判别分析，客服服务态度差和还款不方便为客户流失的主要原因，因此只有对客服服务态度差和还款不方便两个因素采取措施，才能挽留住客户。
-
+### 2、ODS输出HTML文件
+- 实例内容：对孩子的身高与父母身高的关系进行回归分析，结果以HTML网页的方式存储到目录文件夹下
+```
+ods listing close;
+ods results off;
+ods html path='d:\jx'
+         body='shengao_bo.html'(title='父母与孩子身高关系')
+         contents='shengao_con.html'(title='身高分析')
+         frame='shengao_fram.html'(title='父母与孩子身高公式')
+         newfile=proc;
+*对外部数据处理;
+%let  path= D:\jx\shengao;  /*定义外部文件路径*/
+%let  type=.txt;
+%let  fil= "&path&type";
+LIBNAME  jx 'd:\jx';  /*定义逻辑库*/
+DATA  jx.shengao;  /*数据集存储到指定逻辑库*/
+	Infile  &fil dlm='|'  dsd  missover; 
+	input   haizi :4. father  :4. mother :4.;
+RUN;
+/*调corr过程分析*/
+PROC corr data=jx.shengao nosimple;
+var father mother haizi;
+RUN;
+ods html close;
+ods results off;
+ods listing;
+```
+### 3、信用卡交易流水提取
+- 实例内容：从Oracle数据库交易表trans_flow中提取客户卡号为100000000000000008，时间为201207-01到2012-31期间的数据，分析客户消费行为。
+```
+1. SAS程序实现外部数据装载到ORACLE数据库。
+*外部数据处理，生成SAS数据集;
+libname  jx  oracle  user=chiran  password=chiran  path=orcl;       
+%let  f1 =d:\jx\tran_flow.dat;                                  
+%let  filjx = "&f1";                                            
+data transflow;                                
+Infile  &filjx  dlm='|'  lrecl=82  dsd  missover  ;
+input  cust_id          :6.                  
+      card_num        :$18.      
+      name            :$10.     
+      jiaoyie            :7.2     
+      jiaoyi_dt         :yymmdd10.      
+      jiaoyi_address   :$30.     
+      jiaoyi_type      :$1.        
+;
+run;
+*生成的SAS数据集transflow装载到ORACLE数据库目标表trans_flow;
+proc  append  base=jx.trans_flow 
+	( bulkload=no
+	  dbsastype=(	
+	   cust_id      ='NUMERIC'
+	   jiaoyie        ='NUMERIC'
+		jiaoyi_dt       ='DATE'     
+	)
+	nullchar=NO /*告诉SAS系统缺失值是以NULLCHARVAL=指定值替换*/
+	nullcharval=" "
+	)                                                       
+	data=transflow;
+	run;
+2. 提取ORACLE数据仓库目标表trans_flow数据分析。
+Libname  jx  oracle user=chiran password=chiran path=orcl;
+proc sql noprint;
+  select  begi_dt  format  50.  into  :v_begidt   from  jx.begi_end_sj;
+/*查询变量日期赋值给变量v_begidt*/
+  select  end_dt  format  50.  into  :v_enddt  from  jx.begi_end_sj;
+/*查询变量日期赋值给变量v_enddt*/
+quit;
+data  trans201207;
+set  jx.trans_flow;
+where  &v_begidt<jiaoyi_dt<&v_enddt  and  card_num='100000000000000008';
+ /*查询条件*/
+run;
+5. 调用过程分析。
+/*调用means过程分析*/
+proc  means  data=trans201207 ;
+var  jiaoyie;
+run;
+```
+- 分析：此客户月平均刷卡消费为1547.14元，最高消费额为3020.13元，最低消费额为320.13元
